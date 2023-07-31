@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -13,24 +14,36 @@ import (
 )
 
 func main() {
-	for _, apex := range getDataFromStdin() {
+	fastScan := flag.Bool("skip", false, "when this flag is provided we will not use bbot")
+	flag.Parse()
 
-		var wg sync.WaitGroup
+	var wg sync.WaitGroup
+	for _, apex := range getDataFromStdin() {
+		if !*fastScan {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				parseBbotData(apex)
+			}()
+
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			execCommand(true, "amass", "enum", "-passive", "-d", apex)
+			execCommand(false, "amass", "db", "-names", "-d", apex, "-nocolor")
+		}()
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			execCommand(false, "github-subdomains", "-d", apex, "-raw", "-o", "/tmp/githubsubdomains.txt")
 		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			execCommand(false, "subfinder", "-d", apex)
-		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			parseBbotData(apex)
+			execCommand(false, "subfinder", "-d", apex, "-all")
 		}()
 
 		wg.Wait()
@@ -38,7 +51,6 @@ func main() {
 }
 
 func getDataFromStdin() []string {
-
 	scanner := bufio.NewScanner(os.Stdin)
 
 	var apexes []string
