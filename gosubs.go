@@ -38,22 +38,17 @@ func main() {
 }
 
 func getDataFromStdin() []string {
-	file := os.Stdin
-	fi, err := file.Stat()
-	if err != nil {
-		fmt.Println("file.Stat()", err)
-	}
-	size := fi.Size()
-	if size < 2 {
-		fmt.Println("Stdin is empty")
-	}
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(os.Stdin)
 
 	var apexes []string
 
 	for scanner.Scan() {
 		apexes = append(apexes, scanner.Text())
+	}
+
+	if len(apexes) == 0 {
+		log.Fatal("Stdin is empty")
 	}
 	return apexes
 }
